@@ -1,0 +1,54 @@
+From b58068e2990c88af616f6fcd6fa00dd0b984900e Mon Sep 17 00:00:00 2001
+From: Yann Dirson <yann.dirson@vates.fr>
+Date: Tue, 19 Sep 2023 18:05:25 +0200
+Subject: [PATCH] bsg-lib pre-5.0 API
+
+The upstream driver uses the bsg-lib API as it exists in 5.0 and later
+kernels.  It happens that the RHEL8 4.18-based kernel includes those
+changes, which allows a single driver to work with both RHEL8 and
+RHEL9 kernels.
+
+1. From commit 5e28b8d8a1b03ce86f33d38a64a4983d2b5c7679 a new
+bsg_remove_queue help is added, we just expand it to use the code its
+use replaces, from that very commit
+
+2. From commit aae3b069d5ce865ca5ef2902c2a22cef7ab4f3a2 an optional
+timeout parameter is added, which this driver does not use, so we can
+safely just drop the NULL
+
+  struct request_queue *bsg_setup_queue(struct device *dev, const char *name,
+ -		bsg_job_fn *job_fn, int dd_job_size);
+ +		bsg_job_fn *job_fn, rq_timed_out_fn *timeout, int dd_job_size);
+
+---
+ mpi3mr_app.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/mpi3mr_app.c b/mpi3mr_app.c
+index 1e69b8f..94e17ff 100755
+--- a/mpi3mr_app.c
++++ b/mpi3mr_app.c
+@@ -2922,7 +2922,10 @@ void mpi3mr_bsg_exit(struct mpi3mr_ioc *mrioc)
+ 	if (!mrioc->bsg_queue)
+ 		return;
+ 
+-	bsg_remove_queue(mrioc->bsg_queue);
++	if (mrioc->bsg_queue) {
++		bsg_unregister_queue(mrioc->bsg_queue);
++		blk_cleanup_queue(mrioc->bsg_queue);
++	}
+ 	mrioc->bsg_queue = NULL;
+ 
+ 	device_del(bsg_dev);
+@@ -2972,7 +2975,7 @@ void mpi3mr_bsg_init(struct mpi3mr_ioc *mrioc)
+ 	}
+ 
+ 	queue = bsg_setup_queue(bsg_dev, dev_name(bsg_dev),
+-			mpi3mr_bsg_request, NULL, 0);
++			mpi3mr_bsg_request, 0);
+ 	if (IS_ERR(queue)) {
+ 		ioc_err(mrioc, "%s: bsg registration failed\n",
+ 		    dev_name(bsg_dev));
+-- 
+2.30.2
+
