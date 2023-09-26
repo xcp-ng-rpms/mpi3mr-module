@@ -1,0 +1,43 @@
+# begin pack-specific values
+SPEC := SPECS/mpi3mr-module.spec
+TEXT := Driver Pack for Broadcom mpi3mr RAID controler
+UUID := 0c7b6bfe-5ad9-457f-8ed4-184245f7203f
+PACK_BUILD = pack.0.1
+# key to sign update with
+GPG_KEY_FILE := RPM-GPG-KEY-XS-DDK-Test
+# end pack-specific values
+
+LABEL = $(PACKAGE_NAME)
+PACK_VERSION = $(XENSERVER_VERSION)
+
+# no changes below here
+RPM_VERSION := $(shell sed -ne 's/^Version: *//p' $(SPEC))
+RPM_RELEASE := $(shell rpm --define "_topdir $(CURDIR)" --eval $(shell sed -ne 's/^Release: *//p' $(SPEC)))
+RPMDIR := $(shell rpm --define "_topdir $(CURDIR)" --eval %{_rpmdir})
+RPMSOURCES := $(shell rpm --define "_topdir $(CURDIR)" --eval %{_sourcedir})
+ARCH := $(shell uname -p)
+XENSERVER_VERSION := $(shell . /etc/os-release ; IFS=- ; set -- $$VERSION ; echo $$1)
+PACKAGE_NAME := $(shell sed -ne 's/^Name: *//p' $(SPEC))
+ISO := $(PACKAGE_NAME)-$(RPM_VERSION)-$(RPM_RELEASE).iso
+GPG_UID = $(shell gpg --batch --with-colons $(GPG_KEY_FILE) 2>/dev/null | awk -F: '$$1=="pub" {print $$5}')
+
+RPM := $(PACKAGE_NAME)-$(RPM_VERSION)-$(RPM_RELEASE)
+RPM_FILE := $(RPM:%=$(RPMDIR)/$(ARCH)/%.$(ARCH).rpm)
+
+
+$(ISO): $(RPM_FILE) $(GPG_KEY_FILE)
+	sed -e 's/@DRIVER@/$(PACKAGE_NAME)/g' groups.xml >/tmp/groups.xml
+	build-update --uuid $(UUID) --label "$(LABEL)" --version $(PACK_VERSION).$(PACK_BUILD) \
+		--description "$(TEXT)" \
+		--groupfile /tmp/groups.xml \
+		--key "$(GPG_UID)" --keyfile $(GPG_KEY_FILE) \
+		-o $@ $(RPM_FILE)
+
+$(RPM_FILE): $(SPEC)
+	rpmbuild -bb --define "_topdir $(CURDIR)" $<
+
+$(GPG_KEY_FILE):
+	generate-test-key $@
+
+clean:
+	rm -f $(ISO)
