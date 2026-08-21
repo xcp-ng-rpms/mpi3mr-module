@@ -3,7 +3,10 @@
 Summary: Broadcom mpi3mr RAID device driver
 Name: mpi3mr-module
 Version: 8.17.1.0.0
-Release: 1%{?dist}
+Release: 2%{?dist}
+# Built against new kABI after cip rebase
+Requires: xcpng-kernel-kabi = 4.19.325-cip134+
+
 License: GPL-2.0-or-later
 
 # https://www.broadcom.com/support/download-search?pg=Storage+Adapters,+Controllers,+and+ICs&pf=Storage+Adapters,+Controllers,+and+ICs&pn=MegaRAID+9670W-16i&pa=&po=&dk=&pl=&l=false
@@ -48,6 +51,9 @@ find %{buildroot}/lib/modules/%{kernel_version} -name "*.ko" -type f | xargs chm
 /lib/modules/%{kernel_version}/*/*.ko
 
 %changelog
+* Mon Aug 31 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 8.17.1.0.0-2
+- Rebuild for kernel v4.19.325-cip134
+
 * Tue May 12 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 8.17.1.0.0-1
 - Sync to latest available version
 - Drop 0001-bsg-lib-pre-5.0-API.patch, as a compat layer was added with an equivalent change
