@@ -3,7 +3,7 @@
 Summary: Broadcom mpi3mr RAID device driver
 Name: mpi3mr-module
 Version: 8.17.1.0.0
-Release: 2%{?dist}
+Release: 2.0.cip134.1%{?dist}
 # Built against new kABI after cip rebase
 Requires: xcpng-kernel-kabi = 4.19.325-cip134+
 
